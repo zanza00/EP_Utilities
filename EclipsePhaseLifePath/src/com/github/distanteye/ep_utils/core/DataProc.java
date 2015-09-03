@@ -1,3 +1,4 @@
+package com.github.distanteye.ep_utils.core;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -9,16 +10,15 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 
- */
+import com.github.distanteye.ep_utils.containers.*;
+import com.github.distanteye.ep_utils.containers.Package; // explicit because name ambiguity
 
 /**
- * @author Vigilant
- *
  * The DataFileProcessor class serves to take commands to look up a particular table,
  * and results in the right table (from text files) being called up, and the appropriate
  * action being processed
+ * 
+ * @author Vigilant
  *
  */
 public class DataProc {
@@ -134,6 +134,21 @@ public class DataProc {
 
 				addStep(chunk);
 			
+			}
+			else if (chunk[0].equalsIgnoreCase("charvars") && chunk.length > 1)
+			{
+				for (int i = 1; i< chunk.length; i++)
+				{
+					String[] parts = chunk[i].split(":");
+					if (parts.length == 2)
+					{
+						PlayerCharacter.charConstants.put(parts[0], parts[1]);
+					}
+					else
+					{
+						throw new IllegalArgumentException("Improperly formated charvar at line : " + fileLineNumber + " (" + chunk[i] +")");
+					}
+				}
 			}
 			else
 			{
@@ -458,7 +473,7 @@ public class DataProc {
 			
 			String name = Utils.returnStringInTag("name", nextTrait, 0);
 			String cost = Utils.returnStringInTag("cost", nextTrait, 0);
-			String bonus = Utils.returnStringInTag("cost", nextTrait, 0);
+			String bonus = Utils.returnStringInTag("bonus", nextTrait, 0);
 			String desc = Utils.returnStringInTag("description", nextTrait, 0);
 
 			Trait.CreateInternalTrait(name,desc,cost,bonus,1);

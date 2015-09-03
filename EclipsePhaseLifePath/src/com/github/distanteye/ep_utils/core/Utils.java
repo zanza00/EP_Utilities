@@ -1,10 +1,10 @@
+package com.github.distanteye.ep_utils.core;
 import java.util.HashMap;
 
 /**
+ * General Utility class, mainly focusing on String management. It's under investigation
+ * whether some or all of this might be replaced by a common library
  * 
- */
-
-/**
  * @author Vigilant
  *
  */
@@ -19,6 +19,11 @@ public class Utils {
 	    }
 	}
 	
+	/**
+	 * Joins String[] into single String, separated by String joiner
+	 * @param arr valid String[]
+	 * @return Will return "" if empty, else, a single String joining all of arr's values together between the joiner passed
+	 */
 	public static String joinStr(String[] arr, String joiner)
 	{
 		if (arr.length == 0)
@@ -36,6 +41,11 @@ public class Utils {
 		return result;
 	}
 	
+	/**
+	 * Joins String[] into single String, separated by newlines 
+	 * @param arr valid String[]
+	 * @return Will return "" if empty, else, a single String joining all of arr's values together between newlines
+	 */
 	public static String joinStr(String[] arr)
 	{
 		return joinStr(arr,"\n");

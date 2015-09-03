@@ -1,15 +1,13 @@
+package com.github.distanteye.ep_utils.core;
 /**
  * Simple function meant to allow to store references to effects lists that are long and used repeatedly.
- * Functions are shorter versions of packages that will autoresolve to explain their effects. A convience item
- */
-
-/**
+ * Functions are shorter versions of packages that will auto-resolve to explain their effects. A convenience item
+ * 
  * @author Vigilant
- *
  */
 public class Function implements UniqueNamedData {
 	private String name;
-	private String effect; // effects for each PP value
+	private String effect;
 	
 	
 	/**
@@ -22,9 +20,6 @@ public class Function implements UniqueNamedData {
 		this.effect = effect;
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}

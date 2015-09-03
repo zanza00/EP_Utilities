@@ -1,3 +1,4 @@
+package com.github.distanteye.ep_utils.containers;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -5,10 +6,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Container for Eclipse Phase skills.
+ * Has an exists method, to validate whether a name is a valid Skill.
+ * Skill objects are intended to only be of certain names/descriptions predefined at start
  * 
- */
-
-/**
+ * There is generally a rule that Skills cost more points to buy when over a certain value,
+ * this is defined by Skill.EXPENSIVE_LEVEL, and there are options available to either apply that
+ * adjustment directly to Skill value, or return it via a calculation method 
+ * 
  * @author Vigilant
  *
  */
@@ -21,8 +26,9 @@ public class Skill {
 	private int value;
 	private boolean isActive;
 	private boolean isKnowledge;
-	private boolean canDefault = true;
+	private boolean canDefault;
 	private ArrayList<String> categories;
+	public static int EXPENSIVE_LEVEL = 60; // As defined by Core, adding over this value costs more Rez/CP 
 	
 	// stuff related to regexes
 	// we define constants to make the regexes more readable
@@ -46,12 +52,12 @@ public class Skill {
 	public static ArrayList<Skill> skillList = new ArrayList<Skill>();
 	
 	/**
-	 * @param name
-	 * @param linkedApt
-	 * @param subtype
-	 * @param specialization
-	 * @param value
-	 * @param canDefault
+	 * @param name Skill name
+	 * @param linkedApt What Aptitude this Skill uses (STR,WIL,etc)
+	 * @param subtype For field skills, the subtype, such as Ground for the Pilot Skill
+	 * @param specialization A special focus for this Skill (often blank)
+	 * @param value Skill level/skill points
+	 * @param canDefault Whether Characters without this skill can default to their Aptitude value
 	 * @param categories Cannot be null, first entry should always be knowledge or active
 	 */
 	private Skill(String name, String linkedApt, String subtype,
@@ -131,7 +137,15 @@ public class Skill {
 	 */
 	public static Skill CreateSkill(String name, int value)
 	{
-		return Skill.CreateSkill(name,"","",value);
+		if (name.contains(":") || name.contains("["))
+		{
+			// if we see signs that it's a more advanced skill type, we have to use the stronger methods
+			return Skill.CreateSkillFromString(name + " " + value);
+		}
+		else
+		{
+			return Skill.CreateSkill(name,"","",value);
+		}
 	}
 	
 	/**
@@ -438,73 +452,55 @@ public class Skill {
 		return result;
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
 
-	/**
-	 * @param name the name to set
-	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
-	/**
-	 * @return the subtype
-	 */
 	public String getSubtype() {
 		return subtype;
 	}
 
-	/**
-	 * @param subtype the subtype to set
-	 */
 	public void setSubtype(String subtype) {
 		this.subtype = subtype;
 	}
 
-	/**
-	 * @return the specialization
-	 */
 	public String getSpecialization() {
 		return specialization;
 	}
 
-	/**
-	 * @param specialization the specialization to set
-	 */
 	public void setSpecialization(String specialization) {
 		this.specialization = specialization;
 	}
 
-	/**
-	 * @return the value
-	 */
 	public int getValue() {
 		return value;
 	}
 
 	/**
+	 * Sets value for skill, capping between 0 and 99
 	 * @param value the value to set
 	 */
 	public void setValue(int value) {
 		this.value = value;
 		
-		// implement capping
+		// capping
 		if (this.value > 99)
 		{
 			this.value = 99;
 		}
-		else if (this.value < -1)
+		else if (this.value < 0)
 		{
-			this.value = -1;
+			this.value = 0;
 		}
 	}
 
 	/**
+	 * Adds a set value to this Skill's skill points, without any adjustments 
+	 * 
 	 * @param value the value to increase by (can be negative)
 	 */
 	public void addValue(int value) {
@@ -512,35 +508,42 @@ public class Skill {
 	}
 	
 	/**
-	 * This form of the method automatically halves any gains to the skill the add bring the skill above 60
+	 * This form of the method automatically halves any gains to the skill the add bring the skill above Skill.EXPENSIVE_LEVEL
 	 * 
 	 * @param value the value to increase by (can be negative)
-	 * @param masteryFlag If true, the value added will only add half gains once the skill would be pushed above 60
+	 * @param masteryFlag If true, the value added will only add half gains once the skill would be pushed above Skill.EXPENSIVE_LEVEL
 	 */
 	public void addValue(int value, boolean masteryFlag) {
-		if (value < 0 || !masteryFlag || this.value+value <= 60)
+		if (value < 0 || !masteryFlag || this.value+value <= Skill.EXPENSIVE_LEVEL)
 		{
 			this.addValue(value);
 		}
 		else
 		{
-			this.setValue(over60Adjust(this.value+value));
+			this.setValue(skillAdjustExpensiveCap(this.value+value));
 		}
 		
 	}
 	
-	protected static int over60Adjust(int val)
+	/**
+	 * After skills go above a certain point they become more expensive to level, this method assumes
+	 * those calculations haven't been applied yet and gives an adjusted value to the passed in number 
+	 * 
+	 * @param val Input to check against the cap
+	 * @return Adjusted version of val, which may be lower if it was over Skill.EXPENSIVE_LEVEL
+	 */
+	protected static int skillAdjustExpensiveCap(int val)
 	{
-		if (val <= 60)
+		if (val <= Skill.EXPENSIVE_LEVEL)
 		{
 			return val;
 		}
 		else
 		{
-			// calculate how much it goes over 60 and save that value
-			int leftover = val - 60;
+			// calculate how much it goes over Skill.EXPENSIVE_LEVEL and save that value
+			int leftover = val - Skill.EXPENSIVE_LEVEL;
 						
-			int result = 60;
+			int result = Skill.EXPENSIVE_LEVEL;
 						
 			// add the rest with calculations factored in
 			result += leftover/2;
@@ -548,37 +551,25 @@ public class Skill {
 		}
 	}
 	
-	/**
-	 * @return the isActive
-	 */
-	public boolean isActive() {
+	public boolean isActiveSkill() {
 		return isActive;
 	}
 
-	/**
-	 * @return the isKnowledge
-	 */
 	public boolean isKnowledge() {
 		return isKnowledge;
 	}
 
-
-	/**
-	 * @return the linkedApt
-	 */
 	public String getLinkedApt() {
 		return linkedApt;
 	}
 
-	/**
-	 * @return the canDefault
-	 */
 	public boolean getCanDefault() {
 		return canDefault;
 	}
 
 	/**
-	 * @return the categories
+	 * Returns a deepy copy of the Skill categories
+	 * @return String[] of Skill's categories
 	 */
 	public String[] getCategories() {
 		String[] deepCopy = new String[categories.size()];

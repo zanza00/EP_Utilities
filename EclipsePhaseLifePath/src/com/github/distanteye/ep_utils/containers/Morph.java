@@ -1,18 +1,20 @@
+package com.github.distanteye.ep_utils.containers;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.github.distanteye.ep_utils.core.Utils;
 
 /**
+ * Container for Morphs, holding all possible Morph information.
+ * Has static methods for validating whether a Morph exists, and only
+ * accepts creating copies of a list of morphs made from CreateInternalMorph
  * 
- */
-
-/**
  * @author Vigilant
  *
  */
 public class Morph {
 	private String name;
-	private String morphType;
+	private MorphType morphType;
 	private String description;
 	private String implants;
 	private HashMap<String,Integer> aptitudeMaximums;
@@ -29,7 +31,7 @@ public class Morph {
 	
 	/**
 	 * @param name Name of morph
-	 * @param morphType The type of the morph Biomorph, Infomorph, Synth, Pod
+	 * @param morphType The type of the morph Biomorph, Infomorph, Synth, Pod. Not case sensitive
 	 * @param description Human readable description of morph
 	 * @param implants String containing list of implants for the morph
 	 * @param aptitudeMaxStr String of aptitude maximums. Can be a single value for all or a single default value with caveats
@@ -40,7 +42,7 @@ public class Morph {
 	 * @param effects Effects string that models the effects caused by possessing the morph 
 	 * @param Notes Any remaining notes about the morph
 	 */
-	private Morph(String name, String morphType, String description, String implants, String aptitudeMaxStr, int durability, int woundThreshold, int CP,
+	private Morph(String name, MorphType morphType, String description, String implants, String aptitudeMaxStr, int durability, int woundThreshold, int CP,
 					String creditCost, String effects, String notes) {
 		super();
 		this.name = name;
@@ -89,93 +91,54 @@ public class Morph {
 		this.notes = t.notes;
 	}
 	
-	/**
-	 * @return the implants
-	 */
 	public String getImplants() {
 		return implants;
 	}
 
-	/**
-	 * @param implants the implants to set
-	 */
 	public void setImplants(String implants) {
 		this.implants = implants;
 	}
 
-	/**
-	 * @return the effects
-	 */
 	public String getEffects() {
 		return effects;
 	}
 
-	/**
-	 * @param effects the effects to set
-	 */
 	public void setEffects(String effects) {
 		this.effects = effects;
 	}
 
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
 
-	/**
-	 * @return the morphType
-	 */
-	public String getMorphType() {
+	public MorphType getMorphType() {
 		return morphType;
 	}
 
-	/**
-	 * @return the description
-	 */
 	public String getDescription() {
 		return description;
 	}
 
-	/**
-	 * @return the aptitudeMaximums
-	 */
 	public HashMap<String, Integer> getAptitudeMaximums() {
 		return aptitudeMaximums;
 	}
 
-	/**
-	 * @return the durability
-	 */
 	public int getDurability() {
 		return durability;
 	}
 
-	/**
-	 * @return the woundThreshold
-	 */
 	public int getWoundThreshold() {
 		return woundThreshold;
 	}
 
-	/**
-	 * @return the cP
-	 */
 	public int getCP() {
 		return CP;
 	}
 
-	/**
-	 * @return the creditCost
-	 */
 	public String getCreditCost() {
 		return creditCost;
 	}	
 	
-	/**
-	 * @return the notes
-	 */
 	public String getNotes() {
 		return notes;
 	}
@@ -219,6 +182,16 @@ public class Morph {
 	}
 
 	/**
+	 * Returns whether name is a valid morph
+	 * @param name String containing name of a Morph
+	 * @return True/False as appropriate
+	 */
+	public boolean itemExists(String name)
+	{
+		return Morph.exists(name);
+	}
+	
+	/**
 	 * Gets a copy of a morph from the predefined list (the level will be mutable, possibly more in the future)
 	 * 
 	 * @param morphName Name of morph to search for
@@ -261,11 +234,29 @@ public class Morph {
 			throw new IllegalArgumentException("Invalidly formatted Morph string[] : " + Utils.joinStr(parts,","));
 		}
 		
+		int cnt = 0;
+		String name = parts[cnt++];
+		MorphType morphType = EnumFactory.getEnum(MorphType.class, parts[cnt++]);
+		String description = parts[cnt++];
+		String implants = parts[cnt++];
+		String aptitudeMaxStr = parts[cnt++];
+		int durability = Integer.parseInt(parts[cnt++]);
+		int woundThreshold = Integer.parseInt(parts[cnt++]);
+		int CP = Integer.parseInt(parts[cnt++]);
+		String creditCost = parts[cnt++];
+		String effects = parts[cnt++];
+		String notes = parts[cnt++];
 		
-		Morph temp = new Morph(parts[0],parts[1], parts[2],parts[3],parts[4],
-				Integer.parseInt(parts[5]),Integer.parseInt(parts[6]),Integer.parseInt(parts[7]),parts[8],parts[9], parts[10]);
+		Morph temp = new Morph(name,morphType,description,implants,aptitudeMaxStr,durability,woundThreshold,CP,creditCost,effects,notes);
 		Morph.morphList.add(temp);
 	}
 	
-	
+	/**
+	 * What family of morphs the morph is from: Biomorph, Synth, Pod, Infomorph
+	 * @author Vigilant
+	 */
+	public enum MorphType
+	{
+		BIOMORPH, INFOMORPH, SYNTH, POD;
+	}
 }

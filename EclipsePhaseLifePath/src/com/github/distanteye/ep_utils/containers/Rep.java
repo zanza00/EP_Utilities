@@ -1,15 +1,16 @@
+package com.github.distanteye.ep_utils.containers;
 import java.util.HashMap;
 
 /**
+ * Container for Rep types, for the different Reputation networks.
+ * Has an exists method, to validate whether a name is a valid Rep type.
+ * Rep are intended to only be of certain names/descriptions predefined at start
  * 
- */
-
-/**
  * @author Vigilant
  *
  */
 public class Rep implements Comparable<Rep> {
-	public static HashMap<String,Rep> repTypes = new HashMap<String,Rep>();
+	public static HashMap<String,Rep> repTypes = new HashMap<String,Rep>(); // these are dynamic so no Enums
 	
 	private String name;
 	private String description;
@@ -98,37 +99,22 @@ public class Rep implements Comparable<Rep> {
 		return name+"-rep : " + value;
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
 
-	/**
-	 * @param name the name to set
-	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
-	/**
-	 * @return the description
-	 */
 	public String getDescription() {
 		return description;
 	}
 
-	/**
-	 * @param description the description to set
-	 */
 	public void setDescription(String description) {
 		this.description = description;
 	}
 
-	/**
-	 * @return the value
-	 */
 	public int getValue() {
 		return value;
 	}
@@ -173,16 +159,10 @@ public class Rep implements Comparable<Rep> {
 		this.setValue(value+this.value);
 	}
 
-	/**
-	 * @return the networkingField
-	 */
 	public String getNetworkingField() {
 		return networkingField;
 	}
 
-	/**
-	 * @param networkingField the networkingField to set
-	 */
 	public void setNetworkingField(String networkingField) {
 		this.networkingField = networkingField;
 	}

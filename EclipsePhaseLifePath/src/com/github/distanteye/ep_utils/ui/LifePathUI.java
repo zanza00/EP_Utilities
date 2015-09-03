@@ -1,3 +1,4 @@
+package com.github.distanteye.ep_utils.ui;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -7,14 +8,16 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+
+import com.github.distanteye.ep_utils.containers.Aptitude;
+import com.github.distanteye.ep_utils.containers.Rep;
+import com.github.distanteye.ep_utils.core.DataProc;
+import com.github.distanteye.ep_utils.core.LifePathGenerator;
 
 /**
+ * Visual interface for LifePath type character generation. While there is room for some user
+ * editting, most of the fields are driven by table rolling and character prompt choices
  * 
- */
-
-/**
  * @author Vigilant
  *
  */
@@ -24,7 +27,7 @@ public class LifePathUI implements UI {
 	 
 	 // we still hardcode some stats like this because the page would break 
 	 //		if they were user definable anyways
-	 final static String[] primStats = {"COG","COO","INT","REF","SAV","SOM","WIL"}; 
+	 final static String[] primStats = Aptitude.aptitudes; 
 	 final static String[] secStats = {"DUR","WT","DR","LUC","TT","IR","INIT","SPD","DB"};
 	 private BorderLayout windowLayout;
 	 private JFrame mainWindow;
@@ -42,6 +45,7 @@ public class LifePathUI implements UI {
         mainWindow = new JFrame();     
         mainPanel = new GridBagUIPanel();
         statPanel = new GridBagUIPanel();
+        sideBar = new GridBagUIPanel();
         mainWindow.setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 	}
 
@@ -91,14 +95,8 @@ public class LifePathUI implements UI {
 		int resp = JOptionPane.showConfirmDialog(null,"Error Resulted, redo step?\n"+message, 
 													"Error", JOptionPane.YES_NO_OPTION);
 		
-		if (resp == JOptionPane.YES_OPTION)
-		{
-			return true;
-		}
-		else			
-		{
-			return false;
-		}		
+		return resp == JOptionPane.YES_OPTION;
+		
 	}
 
 	/* (non-Javadoc)
@@ -132,15 +130,14 @@ public class LifePathUI implements UI {
 		mainWindow.add(mainPanel);
 		
 		// start first row of rows of mixed size
-		mainPanel.addMappedTF(0,0,"Character Name",20,new TextChangeListener());
+		mainPanel.addMappedTF(0,0,"Character Name",20,this);
 		mainPanel.addMappedFixedTF(2,0,"Morph","",10,true);
 		mainPanel.addMappedFixedTF(4,0,"Background","",10,true);
 		mainPanel.addMappedFixedTF(6,0,"Natural Language", "",15,true);
 		mainPanel.addMappedFixedTF(8,0,"Faction","",10,true);
 		mainPanel.endRow(10,0);
 		
-		// we init new Panel for the sidebar (skills displays)
-		sideBar = new GridBagUIPanel();
+		// we add Panel for the sidebar (skills displays)		
 		
 		// addC is (component,x,y,height,width)
 		mainPanel.addC(sideBar,22,0,GridBagConstraints.REMAINDER,1);
@@ -163,7 +160,7 @@ public class LifePathUI implements UI {
 		idx = 0;
 		for (String key : primStats)
 		{
-			statPanel.addMappedTF(idx, 1, "Bonus", "MorphBonus"+key, 5, new TextChangeListener());
+			statPanel.addMappedTF(idx, 1, "Bonus", "MorphBonus"+key, 5, this);
 			idx +=2;
 		}
 		statPanel.endRow(idx,1);
@@ -191,7 +188,7 @@ public class LifePathUI implements UI {
 		idx = 0;
 		for (String key : secStats)
 		{
-			statPanel.addMappedTF(idx, 4, "Bonus", "MorphBonus"+key, 5, new TextChangeListener());
+			statPanel.addMappedTF(idx, 4, "Bonus", "MorphBonus"+key, 5, this);
 			idx +=2;
 		}
 		statPanel.endRow(idx,4);
@@ -222,7 +219,7 @@ public class LifePathUI implements UI {
 		statPanel.endRow(xIdx,7);
 				
 		// create the main status window		
-		mainStatus = new JTextArea(40,160);
+		mainStatus = new JTextArea(40,60);
 		mainStatus.setMinimumSize(mainStatus.getPreferredSize());
 		mainStatus.setMaximumSize(mainStatus.getPreferredSize());
 		mainStatus.setLineWrap(true);
@@ -302,7 +299,7 @@ public class LifePathUI implements UI {
             }	
 		});
 		
-		// gives a quick export of the character
+		// rolling vs manually choosing
 		mainPanel.addMappedButton(7,26,"Rolling").addActionListener(new ActionListener() {
 
 			public void actionPerformed(ActionEvent e)
@@ -342,7 +339,7 @@ public class LifePathUI implements UI {
 	/**
 	 * Updates all relevant display fields for the character
 	 */
-	private void update()
+	public void update()
 	{
 		gen.getPC().setName(mainPanel.getTextF("Character Name").getText());
 		
@@ -363,15 +360,10 @@ public class LifePathUI implements UI {
 			mainPanel.setTextF("Background",gen.getPC().getBackground());
 		}
 		
-		if (gen.getPC().hasVar("NatLang"))
-		{
-			mainPanel.setTextF("Natural Language",gen.getPC().getVar("NatLang"));
-		}
+		mainPanel.setTextF("Natural Language",gen.getPC().getVarSF("NatLang"));
 		
-		if (gen.getPC().hasVar("{factionName}"))
-		{
-			mainPanel.setTextF("Faction",gen.getPC().getVar("{factionName}"));
-		}
+		mainPanel.setTextF("Faction",gen.getPC().getVarSF("{factionName}"));
+		
 		
 		int[] stats = new int[16];
 		int[] bonuses = new int[16];
@@ -442,7 +434,12 @@ public class LifePathUI implements UI {
 		int x = 0, y = 1;
 		for(String[] pair : gen.getPC().getSkills())
 		{
-			sideBar.addMappedFixedTF(x,y,pair[0], pair[1], 5, false);
+			String linkedApt = gen.getPC().getSkillApt(pair[0]);
+			int morphBonus = statPanel.getTextFVal("MorphBonus"+linkedApt);
+			int finalVal = Integer.parseInt(pair[1])+morphBonus;
+			
+			
+			sideBar.addMappedFixedTF(x,y,pair[0], ""+finalVal, 5, false);
 			if (y <= 32)
 			{
 				y+=2;
@@ -473,24 +470,4 @@ public class LifePathUI implements UI {
 		
 	}
 
-	// triggers an update if the text field changes
-	private class TextChangeListener implements DocumentListener
-	{
-		
-		@Override
-		public void changedUpdate(DocumentEvent e) {
-			update();
-		}
-
-		@Override
-		public void insertUpdate(DocumentEvent e) {
-			update();
-		}
-
-		@Override
-		public void removeUpdate(DocumentEvent e) {
-			update();
-		}
-		
-	}
 }

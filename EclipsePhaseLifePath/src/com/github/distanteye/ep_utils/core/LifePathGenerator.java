@@ -1,23 +1,25 @@
+package com.github.distanteye.ep_utils.core;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 
- */
+import com.github.distanteye.ep_utils.containers.*;
+import com.github.distanteye.ep_utils.containers.Package; // explicit because name ambiguity
+import com.github.distanteye.ep_utils.ui.UI;
 
 /**
- * @author Vigilant
- *
- * The generator class takes in the appropriate information,
+ * The class takes in the appropriate information,
  * and then runs the lifepath process to interactively generate a character
  * through various stages,packages, and tables
+ * 
+ * @author Vigilant
+ *
  */
 public class LifePathGenerator {
 
 	public static SecureRandom rng = new SecureRandom();
-	private Character playerChar;
+	private PlayerCharacter playerChar;
 	private UI UIObject;
 	private boolean isRolling;
 	private String nextEffects; // used to store things between steps
@@ -36,7 +38,7 @@ public class LifePathGenerator {
 	 */
 	public LifePathGenerator(String characterName, UI UIObject_, boolean isRolling)
 	{
-		playerChar = new Character(characterName,false);
+		playerChar = new PlayerCharacter(characterName,false);
 		UIObject = UIObject_;
 		this.isRolling = isRolling;
 		this.nextEffects = "";
@@ -49,16 +51,18 @@ public class LifePathGenerator {
 	
 	
 	/**
-	 * @return the playerChar
+	 * Returns the underlying player's Character object
+	 * @return Character object (copy by reference)
 	 */
-	public Character getPC() {
+	public PlayerCharacter getPC() {
 		return playerChar;
 	}
 
 	/**
-	 * @param playerChar the playerChar to set
+	 * Sets a new Character object for the player
+	 * @param playerChar Valid character object
 	 */
-	public void setPC(Character playerChar) {
+	public void setPC(PlayerCharacter playerChar) {
 		this.playerChar = playerChar;
 	}
 
@@ -281,7 +285,7 @@ public class LifePathGenerator {
 								// remove all not chi sleights
 								for (Sleight s : options)
 								{
-									if (s.getSleightType().equalsIgnoreCase("chi"))
+									if (s.getSleightType()==Sleight.SleightType.CHI)
 									{
 										optionsFinal.add(s);
 									}
@@ -299,7 +303,7 @@ public class LifePathGenerator {
 								// remove all not gamma sleights
 								for (Sleight s : options)
 								{
-									if (s.getSleightType().equalsIgnoreCase("gamma"))
+									if (s.getSleightType()==Sleight.SleightType.GAMMA)
 									{
 										optionsFinal.add(s);
 									}
@@ -363,7 +367,7 @@ public class LifePathGenerator {
 				{
 					if (playerChar.getNumSkills() > 0)
 					{
-						String randSkill = playerChar.getRandSkill();
+						String randSkill = playerChar.getRandSkill(rng);
 						effect = effect.replace("!RANDSKILL!", randSkill);
 					}
 					else
@@ -373,7 +377,7 @@ public class LifePathGenerator {
 				}
 				while(effect.contains("!RANDAPT!"))
 				{
-					effect = effect.replace("!RANDAPT!",playerChar.getRandApt());
+					effect = effect.replace("!RANDAPT!",playerChar.getRandApt(rng));
 				}
 				while(effect.contains("!RAND_DER!"))
 				{
@@ -1005,7 +1009,7 @@ public class LifePathGenerator {
 							throw new IllegalArgumentException("Poorly formatted effect, " + subparts[2] + " is not a number");
 						}
 						
-						if (!temp.getEffectsTree().containsKey(Integer.parseInt(subparts[2])))
+						if (!temp.getAllEffects().containsKey(Integer.parseInt(subparts[2])))
 						{
 							throw new IllegalArgumentException("Poorly formatted effect, " + subparts[2] + " is a listed PP for package " + subparts[1]);
 						}
@@ -1090,7 +1094,7 @@ public class LifePathGenerator {
 							throw new IllegalArgumentException("Poorly formatted effect, sleight " + subparts[1] + " does not exist");
 						}
 						
-						if (! Sleight.sleightList.get(subparts[1]).getSleightType().equalsIgnoreCase("chi") )
+						if ( Sleight.sleightList.get(subparts[1]).getSleightType()!=Sleight.SleightType.CHI )
 						{
 							throw new IllegalArgumentException("Poorly formatted effect, sleight " + subparts[1] + " is not a Psi Chi sleight");
 						}
@@ -1116,7 +1120,7 @@ public class LifePathGenerator {
 							throw new IllegalArgumentException("Poorly formatted effect, sleight " + subparts[1] + " does not exist");
 						}
 						
-						if (! Sleight.sleightList.get(subparts[1]).getSleightType().equalsIgnoreCase("gamma") )
+						if (Sleight.sleightList.get(subparts[1]).getSleightType()!=Sleight.SleightType.GAMMA )
 						{
 							throw new IllegalArgumentException("Poorly formatted effect, sleight " + subparts[1] + " is not a Psi Gamma sleight");
 						}
@@ -1928,28 +1932,12 @@ public class LifePathGenerator {
 	}	
 	
 	
-	
-	/**
-	 * @return the isRolling
-	 */
 	public boolean isRolling() {
 		return isRolling;
 	}
 
-
-	/**
-	 * @param isRolling the isRolling to set
-	 */
 	public void setRolling(boolean isRolling) {
 		this.isRolling = isRolling;
 	}
 
-
-	public static void main(String[] args)
-	{
-		DataProc.init("LifepathPackages.dat","internalInfo.dat");
-		LifePathGenerator gen = new LifePathGenerator("",null,true);
-		
-		gen.runEffect("trait(Mental Disorder (?3?));incSkl(?1?,10)", "");
-	}
 }

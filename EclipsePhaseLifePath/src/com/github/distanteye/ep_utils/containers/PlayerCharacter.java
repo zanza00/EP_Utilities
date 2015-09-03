@@ -1,17 +1,23 @@
+package com.github.distanteye.ep_utils.containers;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
+import com.github.distanteye.ep_utils.core.Step;
+import com.github.distanteye.ep_utils.core.Utils;
+
 /**
+ * Represents entirety of a character in Eclipse Phase, holding Aptitude, gear, skills, sleights,etc
+ * Has methods for aggregating and updating this data as driven by UI or Generator classes 
  * 
- */
-
-/**
  * @author Vigilant
- *
  */
-public class Character {
+public class PlayerCharacter {
 
+	// some values constant to all Characters
+	public static HashMap<String,String> charConstants = new HashMap<String,String>();
+	
 	private HashMap<String,Skill> skillList;
 	private HashMap<String,Aptitude> aptitudeList;
 	private ArrayList<Trait> traitList;
@@ -34,16 +40,14 @@ public class Character {
 	private static final int LEVEL_CAP = 99;
 	
 	/**
-	 * @return the currentTable the player is rolling on (if character gen)
+	 * Returns the current Table name the player is rolling on (if LifePath generation)
+	 * @return String name of current table
 	 */
 	public String getCurrentTable() 
 	{
 		return currentTable;
 	}
 
-	/**
-	 * @param currentTable the currentTable to set
-	 */
 	public void setCurrentTable(String currentTable) 
 	{
 		if (!this.currentTable.equals(currentTable))
@@ -55,9 +59,10 @@ public class Character {
 	}
 
 	/**
-	 * Whenever character is going through some kind of character gen, knowing what they rolled last may be useful
+	 * Whenever character is going through some kind of character gen, 
+	 * knowing what they rolled last may be useful. Returns that value
 	 * 
-	 * @return returns last Roll
+	 * @return Integer for the last value rolled
 	 */
 	public int getLastRoll() 
 	{
@@ -65,7 +70,7 @@ public class Character {
 	}
 
 	/**
-	 * Checks whether a roll is in the stack of last rolls at al
+	 * Checks whether a roll is in the stack of last rolls at all
 	 * @param val Int to check the rolls for
 	 * @return True if present in collection, false otherwise
 	 */
@@ -75,7 +80,8 @@ public class Character {
 	}
 	
 	/**
-	 * @param lastRoll int value to push onto the stack of last rolls
+	 * Pushes a value onto the stack of last rolls
+	 * @param lastRoll int value
 	 */
 	public void addLastRoll(int lastRoll) 
 	{
@@ -83,9 +89,10 @@ public class Character {
 	}
 
 	/**
-	 * @param name
+	 * @param name Character name
+	 * @param autoApplyMastery Whether Skills will start to receive half gains automatically after level > Skill.EXPENSIVE_LEVEL
 	 */
-	public Character(String name, boolean autoApplyMastery) 
+	public PlayerCharacter(String name, boolean autoApplyMastery) 
 	{
 		this.name = name;
 		this.autoApplyMastery = autoApplyMastery;
@@ -132,6 +139,7 @@ public class Character {
 		sleightList = new HashMap<String, Sleight>();
 		
 		this.setVar("{credits}", "0");
+		this.setVar("{creditsSpent}", "0");
 		this.setVar("{faction}", "");
 		this.setVar("{background}", "");
 		this.setVar("{stress}", "0");
@@ -145,7 +153,10 @@ public class Character {
 		packages = new ArrayList<String[]>();
 	}
 	
-	// calculates stats like durability and insanity and such
+	/**
+	 * Calculates and updates derived secondary stats based on primary values,
+	 * as well as the option to determine how much CP the character has used
+	 */
 	public void calcStats()
 	{
 		// don't try and calc if we don't have a morph yet
@@ -164,12 +175,12 @@ public class Character {
 		nonAppStats.put("SPD", 1+speedBon);
 		
 		// Infomorphs don't have physical damage stats 
-		if (!currentMorph.getMorphType().equals("Infomorph"))
+		if (currentMorph.getMorphType()!=Morph.MorphType.INFOMORPH)
 		{
 			nonAppStats.put("DUR", currentMorph.getDurability());
 			nonAppStats.put("WT", currentMorph.getWoundThreshold());
 			int dr = currentMorph.getDurability();
-			if (currentMorph.getMorphType().equals("Synth"))
+			if (currentMorph.getMorphType()==Morph.MorphType.SYNTH)
 			{
 				nonAppStats.put("DR", dr*2);
 			}
@@ -178,7 +189,7 @@ public class Character {
 				nonAppStats.put("DR", (int)Math.round(dr*1.5));
 			}
 			
-			nonAppStats.put("DB", (int)(getAptitude("SOM")/10));
+			nonAppStats.put("DB", getAptitude("SOM")/10);
 		}
 		else
 		{
@@ -193,7 +204,126 @@ public class Character {
 		nonAppStats.put("IR", nonAppStats.get("LUC")*2);
 		nonAppStats.put("INIT", (int)Math.round( ( (getAptitude("INT")+getAptitude("REF"))) * 2 ) / 5 );
 		
-		
+		// calculate CP used if applicable mode
+		if (hasVar("{cpCalc}"))
+		{
+			int cpUsed;
+			int mox, totalRep,totalApt,numSleights,numSpec,activeSkillPoints,knowledgeSkillPoints,totalCredits;
+			
+			mox = nonAppStats.get("MOX");
+			totalRep = 0;
+			totalApt = 0;
+			numSleights = 0;
+			numSpec = 0;
+			activeSkillPoints = 0;
+			knowledgeSkillPoints = 0;
+			totalCredits = this.getVarInt("{credits}");
+			
+			// repCount			
+			for (Rep r : repList.values())
+			{
+				totalRep = r.getValue();
+			}
+			
+			for (Aptitude apt : aptitudeList.values())
+			{
+				totalApt += apt.getValue();
+			}
+			
+			// sleights we just need a simple count
+			numSleights = sleightList.size();
+			
+			// count skills that have specializations 
+			for (Skill skl : skillList.values())
+			{
+				if (skl.getSpecialization().length() > 0)
+				{
+					numSpec++;
+				}
+			}
+			
+			// figure out skillPoint stuff : note, we use getSkills because it already factors in aptitude values
+			for (String[] arr : getSkills())
+			{				
+				int sklVal = Integer.parseInt(arr[1]);
+				
+				if (sklVal > 60)
+				{
+					int remainder = sklVal-60;
+					sklVal += remainder; // the effect is to double remainder to reflect the double cost when past 60
+				}
+				
+				// sanity check, should always be true
+				if (hasSkill(arr[0]))
+				{
+					Skill tmp = skillList.get(arr[0]);
+					
+					// the aptitude isn't part of the cost
+					sklVal -= aptitudeList.get(tmp.getLinkedApt()).getValue();
+					
+					if (tmp.isKnowledge())
+					{
+						if (arr[0].equalsIgnoreCase(getVarSF("NatLang")))
+						{
+							sklVal -= getIntConst("FREE_NAT_LANG"); // don't count the free aspect of this skill
+						}
+						
+						knowledgeSkillPoints += sklVal;
+					}
+					else
+					{
+						activeSkillPoints += sklVal;
+					}
+				}
+				else
+				{
+					throw new IllegalArgumentException("Skill output from getSkills() wasn't found in skillList (" 
+								+ arr[0] +") this should not happen.");
+				}
+			}					
+			
+			// we adjust some values by their free amounts, making sure they never are negative
+			mox = Math.max(0, 		mox - getIntConst("FREE_MOX"));			
+			totalRep = Math.max(0,	totalRep - getIntConst("FREE_REP"));
+			totalApt = Math.max(0, 	totalApt - getIntConst("FREE_APT"));
+			numSleights = 0;
+			numSpec = 0;
+			activeSkillPoints = 0;
+			knowledgeSkillPoints = 0;
+			totalCredits = Math.max(0, 	totalCredits - getIntConst("FREE_CREDIT"));
+			
+			cpUsed = 15*mox + 10*totalApt + 5*numSleights + 5*numSpec + activeSkillPoints + knowledgeSkillPoints + totalRep/10 + totalCredits/1000;
+			
+			// set to relevant character variable
+			this.setVar("{cpUsed}", ""+cpUsed); 
+					
+		}
+	}
+	
+	/**
+	 * Attempts to retrieve integer constant from charConstants 
+	 * @param name Name of constant
+	 * @return Valid integer constant tied to name
+	 */
+	public static int getIntConst(String name)
+	{
+		if (charConstants.containsKey(name))
+		{
+			String val = charConstants.get(name);
+			
+			if (Utils.isInteger(val))
+			{
+				return Integer.parseInt(val);
+			}
+			else
+			{
+				throw new IllegalArgumentException("Character Constant : " + name + " does not exist!");
+			}
+		}
+		else
+		{
+			throw new IllegalArgumentException("Character Constant : " + name + " does not exist!");
+		}
 	}
 	
 	public String toString()
@@ -217,7 +347,7 @@ public class Character {
 	 * Gets the current value of a particular Rep category
 	 * 
 	 * @param repName Rep category to look for
-	 * @return
+	 * @return Value stored by that Rep object
 	 */
 	public int getRepValue(String repName)
 	{
@@ -248,7 +378,10 @@ public class Character {
 	}
 	
 	/**
-	 * Returns any availible Morph Name, or "" if none exist
+	 * Returns any available Morph Name, or "" if none exist
+	 * 
+	 * Silent fail as "" done to be more friendly to UI as this can often
+	 * be blank at start and filled in later
 	 * @return String either equal to the character's Morph's Name or ""
 	 */
 	public String getMorphName()
@@ -264,7 +397,11 @@ public class Character {
 	}
 	
 	/**
-	 * Returns any availible {factionName}, or "" if none exist
+	 * Returns any available {factionName}, or "" if none exist
+	 * 
+	 * Silent fail as "" done to be more friendly to UI as this can often
+	 * be blank at start and filled in later
+	 * 
 	 * @return String either equal to {factionName} or ""
 	 */
 	public String getFaction()
@@ -281,6 +418,10 @@ public class Character {
 	
 	/**
 	 * Returns any availible {pathName}, or "" if none exist
+	 * 
+	 * Silent fail as "" done to be more friendly to UI as this can often
+	 * be blank at start and filled in later
+	 * 
 	 * @return String either equal to {pathName} or ""
 	 */
 	public String getPath()
@@ -295,9 +436,6 @@ public class Character {
 		}
 	}
 	
-	/**
-	 * @return the credits
-	 */
 	public int getCredits() 
 	{
 		return Integer.parseInt(this.getVar("{credits}"));
@@ -329,9 +467,9 @@ public class Character {
 	}
 	
 	/**
-	 * If a valid aptitude name is provided, will set it to the value profided
+	 * If a valid aptitude name is provided, will set it to the value provided
 	 * @param apt Aptitude name
-	 * @param value Integer value between 1 and APTITUDE MAX
+	 * @param value Integer value between 1 and APTITUDE_MAX
 	 */
 	public void setAptitude(String apt, int value)
 	{
@@ -365,7 +503,7 @@ public class Character {
 	}
 	
 	/**
-	 *  If a valid aptitude name is provided, returns its value
+	 * If a valid aptitude name is provided, returns its value
 	 * @param apt Aptitude name
 	 * @return Integer value between 1 and APTITUDE MAX
 	 */
@@ -380,8 +518,8 @@ public class Character {
 	}
 	
 	/**
-	 *  If a valid secondary stat name is provided, returns its value
-	 * @param stat Secondary Stat Name name
+	 * If a valid secondary stat name is provided, returns its value
+	 * @param stat Secondary Stat name
 	 * @return Integer value
 	 */
 	public int getSecStat(String stat)
@@ -395,7 +533,22 @@ public class Character {
 	}
 	
 	/**
-	 * Moxie accessor
+	 * If a valid secondary stat name is provided, changes its value to value
+	 * @param stat Secondary Stat name
+	 * @param value value to change the stat to
+	 */
+	public void setSecStat(String stat, int value)
+	{
+		if (!nonAppStats.containsKey(stat))
+		{
+			throw new IllegalArgumentException(stat + " is not a valid Secondary Stat");
+		}
+		
+		nonAppStats.put(stat,value);
+	}
+	
+	/**
+	 * Moxie accessor method
 	 * @return int value of character's current moxie stat (max, not current amount)
 	 */
 	public int getMox()
@@ -404,7 +557,7 @@ public class Character {
 	}
 	
 	/**
-	 * Moxie mutator
+	 * Moxie mutator method
 	 * @param val positive int value to set player's moxie stat to (max, not current amount)
 	 */
 	public void setMox(int val)
@@ -473,7 +626,7 @@ public class Character {
 	}
 	
 	/**
-	 * Adds/substracts levels from a skill that already exists
+	 * Adds/subtracts levels from a skill that already exists
 	 * 
 	 * @param skillName Name of the skill the character has
 	 * @param amount Amount to add to the skill, can be negative
@@ -555,8 +708,8 @@ public class Character {
 	
 	/**
 	 * Returns final adjusted value for a skill, factoring in base aptitude bonus and mastery adjustments, and skill cap
-	 * @param skl
-	 * @return Adjusted value for skill
+	 * @param skl Valid skill object
+	 * @return Adjusted value/skill points for skill
 	 */
 	public int getFinalSklVal(Skill skl)
 	{
@@ -572,7 +725,7 @@ public class Character {
 		}
 		else
 		{
-			result = Skill.over60Adjust(skl.getValue()+aptValue);
+			result = Skill.skillAdjustExpensiveCap(skl.getValue()+aptValue);
 		}
 		
 		if (result > LEVEL_CAP)
@@ -603,41 +756,26 @@ public class Character {
 		return result;
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() 
 	{
 		return name;
 	}
 
-	/**
-	 * @param name the name to set
-	 */
 	public void setName(String name) 
 	{
 		this.name = name;
 	}
 
-	/**
-	 * @return the age
-	 */
 	public int getAge() 
 	{
 		return age;
 	}
 
-	/**
-	 * @param age the age to set
-	 */
 	public void setAge(int age) 
 	{
 		this.age = age;
 	}
 
-	/**
-	 * @return the background
-	 */
 	public String getBackground() 
 	{
 		if (hasVar("{background}"))
@@ -650,9 +788,6 @@ public class Character {
 		}
 	}
 
-	/**
-	 * @param background the background to set
-	 */
 	public void setBackground(String background) 
 	{
 		this.setVar("{background}", background);
@@ -669,34 +804,21 @@ public class Character {
 		return this.allBackgrounds.contains(background);
 	}
 	
-	/**
-	 * @return the currentMorph
-	 */
 	public Morph getCurrentMorph() 
 	{
 		return currentMorph;
 	}
 
-	/**
-	 * @param currentMorph the currentMorph to set
-	 */
 	public void setCurrentMorph(Morph currentMorph) 
 	{
 		this.currentMorph = currentMorph;
 	}
 
-	/**
-	 * @return the gearList
-	 */
 	public ArrayList<String> getGearList() 
 	{
 		return gearList;
 	}
 	
-	/**
-	 * Add item to gear list
-	 * @param gear Valid equipment name
-	 */
 	public void addGear(String gear)
 	{
 		gearList.add(gear);
@@ -704,7 +826,7 @@ public class Character {
 	
 	/**
 	 * Remove item from gear list, throwing an error if it doesn't exist
-	 * @param gear Valid equipment name of an item that exists, or it will have no effect
+	 * @param gear Valid equipment name of an item that exists
 	 * @return The item removed
 	 */
 	public String removeGear(String gear)
@@ -787,9 +909,9 @@ public class Character {
 	}
 	
 	/**
-	 * Remove trait from Trait list
-	 * @param t Valid name of trait that already exists on the character, or it will have no effect
-	 * @return The Trait removed, or null if it couldn't be removed
+	 * Remove trait from Trait list, throwing an error if it doesn't exist
+	 * @param t Valid name of trait that already exists on the character
+	 * @return The Trait removed
 	 */
 	public Trait removeTrait(String traitStr)
 	{
@@ -922,15 +1044,15 @@ public class Character {
 		return result.trim();
 	}
 	
-	public String getRandSkill()
+	public String getRandSkill(SecureRandom rng)
 	{
-		int idx = LifePathGenerator.rng.nextInt(skillList.size());
+		int idx = rng.nextInt(skillList.size());
 		return ((Skill)skillList.values().toArray()[idx]).getFullName();
 	}
 	
-	public String getRandApt()
+	public String getRandApt(SecureRandom rng)
 	{
-		int idx = LifePathGenerator.rng.nextInt(aptitudeList.size());
+		int idx = rng.nextInt(aptitudeList.size());
 		return (String)aptitudeList.keySet().toArray()[idx];
 	}
 	
@@ -1080,6 +1202,42 @@ public class Character {
 	}
 	
 	/**
+	 * Gets the linked aptitude for the named skill, if it exists
+	 * @param name The name of the skill to search for
+	 * @return A string containing the aptitude linked to that skill
+	 */
+	public String getSkillApt(String name)
+	{
+		if (skillList.containsKey(name))
+		{
+			return skillList.get(name).getLinkedApt();
+		}
+		else
+		{
+			throw new IllegalArgumentException("No such skill exists(" + name + ")!");
+		}
+	}
+	
+	
+	/**
+	 * Retrieves a variable from the general store. 
+	 * This version returns "" instead of throwing an error if no such variable exists
+	 * @param name Name of variable to search for
+	 * @return The matching value for name, or "" if none exists
+	 */
+	public String getVarSF(String name)
+	{
+		if (hasVar(name))
+		{
+			return getVar(name);
+		}
+		else
+		{
+			return "";
+		}
+	}
+	
+	/**
 	 * Retrieves a variable from the general store
 	 * @param name Name of variable to search for
 	 * @return The matching value for name
@@ -1127,16 +1285,10 @@ public class Character {
 		}
 	}
 
-	/**
-	 * @return the lastStep
-	 */
 	public Step getLastStep() {
 		return lastStep;
 	}
 
-	/**
-	 * @param lastStep the lastStep to set
-	 */
 	public void setLastStep(Step lastStep) {
 		this.lastStep = lastStep;
 	}
@@ -1163,16 +1315,10 @@ public class Character {
 		this.packages.add(info);
 	}
 
-	/**
-	 * @return the autoApplyMastery
-	 */
 	public boolean isAutoApplyMastery() {
 		return autoApplyMastery;
 	}
 
-	/**
-	 * @param autoApplyMastery the autoApplyMastery to set
-	 */
 	public void setAutoApplyMastery(boolean autoApplyMastery) {
 		this.autoApplyMastery = autoApplyMastery;
 	}

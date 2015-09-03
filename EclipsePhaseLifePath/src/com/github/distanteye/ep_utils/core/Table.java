@@ -1,10 +1,15 @@
+package com.github.distanteye.ep_utils.core;
 import java.util.ArrayList;
 
 /**
+ * Tables store a list of effects, with contiguous number ranges keyed to each row,
+ * as well as a max number for the end of the range set.
  * 
- */
-
-/**
+ * Table can be "rolled" in this way, providing the diceRolled number to an rng, and returning
+ * a TableRow with the effects matching a particular choice.
+ * 
+ * There is also support for wildcards, when a Table's effect might need some prior context
+ * 
  * @author Vigilant
  *
  */
@@ -119,9 +124,6 @@ public class Table implements UniqueNamedData {
 		}
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
@@ -135,52 +137,22 @@ public class Table implements UniqueNamedData {
 		return "table";
 	}
 	
-	/**
-	 * @param name the name to set
-	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
-	
-	/**
-	 * @return the rows
-	 */
-	public ArrayList<TableRow> getRows() {
-		return rows;
-	}
-
-	/**
-	 * @param rows the rows to set
-	 */
-	public void setRows(ArrayList<TableRow> rows) {
-		this.rows = rows;
-	}
-
-	/**
-	 * @return the diceRolled
-	 */
 	public int getDiceRolled() {
 		return diceRolled;
 	}
 
-	/**
-	 * @param diceRolled the diceRolled to set
-	 */
 	public void setDiceRolled(int diceRolled) {
 		this.diceRolled = diceRolled;
 	}
 
-	/**
-	 * @return the suppressDescriptions
-	 */
 	public boolean isSuppressDescriptions() {
 		return suppressDescriptions;
 	}
 
-	/**
-	 * @param suppressDescriptions the suppressDescriptions to set
-	 */
 	public void setSuppressDescriptions(boolean suppressDescriptions) {
 		this.suppressDescriptions = suppressDescriptions;
 	}

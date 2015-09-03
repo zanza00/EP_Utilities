@@ -1,9 +1,9 @@
+package com.github.distanteye.ep_utils.core;
 /**
  * Container meant to encapsulate different linked steps in a generation process
- * Not strictly necessary, but makes intelligent navigation and management possible without forcing it into a general table
- */
-
-/**
+ * Not strictly necessary, but makes intelligent navigation and management possible without forcing it 
+ * into a Table or Function
+ * 
  * @author Vigilant
  *
  */
@@ -25,16 +25,10 @@ public class Step implements UniqueNamedData {
 		this.nextStep = nextStep;
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
 	
-	/**
-	 * @return the nextStep
-	 */
 	public String getNextStep() {
 		return nextStep;
 	}
@@ -46,7 +40,7 @@ public class Step implements UniqueNamedData {
 	
 	/**
 	 * Differentiates this class from Table and such, which implement the same interface
-	 * @return "function"
+	 * @return "step"
 	 */
 	public String getType()
 	{
@@ -54,8 +48,8 @@ public class Step implements UniqueNamedData {
 	}
 
 	/**
-	 * Return the effects this function contains
-	 * @return The functions effects
+	 * Return the effects this Step contains
+	 * @return The Step's effects
 	 */
 	public String getEffects()
 	{

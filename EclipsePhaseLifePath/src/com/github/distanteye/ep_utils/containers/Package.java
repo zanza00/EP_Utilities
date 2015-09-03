@@ -1,10 +1,15 @@
+package com.github.distanteye.ep_utils.containers;
 import java.util.HashMap;
 
-/**
- * 
- */
+import com.github.distanteye.ep_utils.core.UniqueNamedData;
 
 /**
+ * Common effects container. Packages contain a list of effects, keyed to 
+ * certain PP values (although some may only have PP=1 defined). 
+ * 
+ * Packages are intended to be unique and not repeated multiple times per character,
+ * although this is not strictly enforced at this time.
+ * 
  * @author Vigilant
  *
  */
@@ -43,25 +48,15 @@ public class Package implements UniqueNamedData {
 		return effects.get(PP);
 	}
 	
-	/**
-	 * @return the name
-	 */
 	public String getName() {
 		return name;
 	}
 
-
-	/**
-	 * @return the motivationsList
-	 */
 	public String getMotivationsList() {
 		return motivationsList;
 	}
 
 
-	/**
-	 * @return the specialNotes
-	 */
 	public String getSpecialNotes() {
 		return specialNotes;
 	}
@@ -75,53 +70,31 @@ public class Package implements UniqueNamedData {
 		return "package";
 	}
 
-	/**
-	 * @return the description
-	 */
 	public String getDescription() {
 		return description;
 	}
 
-	/**
-	 * @param description the description to set
-	 */
 	public void setDescription(String description) {
 		this.description = description;
 	}
 
 	/**
-	 * Returns the entire 
+	 * Returns the entire structure of effects (reference)
 	 *
-	 * @return TreeMap structure of the effects
+	 * @return HashMap structure of the effects
 	 */
-	public HashMap<Integer, String> getEffectsTree() {
+	public HashMap<Integer, String> getAllEffects() {
 		return effects;
 	}
 
-	/**
-	 * @param effects the effects to set
-	 */
-	public void setEffects(HashMap<Integer, String> effects) {
-		this.effects = effects;
-	}
-
-	/**
-	 * @param name the name to set
-	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
-	/**
-	 * @param motivationsList the motivationsList to set
-	 */
 	public void setMotivationsList(String motivationsList) {
 		this.motivationsList = motivationsList;
 	}
 
-	/**
-	 * @param specialNotes the specialNotes to set
-	 */
 	public void setSpecialNotes(String specialNotes) {
 		this.specialNotes = specialNotes;
 	}
